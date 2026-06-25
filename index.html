@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AR Image Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-three.prod.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #container { width: 100vw; height: 100vh; position: relative; }
+  </style>
+</head>
+<body>
+
+<div id="container"></div>
+
+<script>
+  const start = async () => {
+
+    const mindarThree = new window.MINDAR.IMAGE.MindARThree({
+      container: document.getElementById("container"),
+      imageTargetSrc: "targets.mind",
+      webXR: false,
+    });
+
+    const { renderer, scene, camera } = mindarThree;
+
+    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+    scene.add(light);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(5, 10, 7);
+    scene.add(dirLight);
+
+    const loader = new THREE.GLTFLoader();
+    loader.load("my-model.glb", (gltf) => {
+      const model = gltf.scene;
+      model.scale.set(0.1, 0.1, 0.1);
+      model.position.set(0, 0, 0);
+      anchor.group.add(model);
+    });
+
+    const anchor = mindarThree.addAnchor(0);
+
+    await mindarThree.start();
+
+    renderer.setAnimationLoop(() => {
+      renderer.render(scene, camera);
+    });
+
+  };
+
+  start();
+</script>
+
+</body>
+</html>
