@@ -2,50 +2,114 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AR Image Tracker</title>
+  <title>AR Debug</title>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-three.prod.js"></script>
   <style>
-    body { margin: 0; overflow: hidden; }
+    body { margin: 0; overflow: hidden; background: #000; }
     #container { width: 100vw; height: 100vh; position: relative; }
+    #log {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      z-index: 9999;
+      background: rgba(0,0,0,0.85);
+      color: #0f0;
+      font-family: monospace;
+      font-size: 13px;
+      padding: 10px;
+      box-sizing: border-box;
+      max-height: 50vh;
+      overflow-y: auto;
+      pointer-events: none;
+    }
+    #log .err { color: #f55; }
+    #log .ok  { color: #5f5; }
+    #log .inf { color: #ff5; }
   </style>
 </head>
 <body>
 
+<div id="log"></div>
 <div id="container"></div>
 
 <script>
+  const log = (msg, type = 'inf') => {
+    const el = document.getElementById('log');
+    el.innerHTML += `<div class="${type}">[${type.toUpperCase()}] ${msg}</div>`;
+    el.scrollTop = el.scrollHeight;
+    console.log(msg);
+  };
+
+  window.onerror = (msg, src, line) => {
+    log(`JS error: ${msg} (line ${line})`, 'err');
+  };
+
   const start = async () => {
+    try {
 
-    const mindarThree = new window.MINDAR.IMAGE.MindARThree({
-      container: document.getElementById("container"),
-      imageTargetSrc: "targets.mind",
-      webXR: false,
-    });
+      log('Script loaded, starting...');
 
-    const { renderer, scene, camera } = mindarThree;
+      if (!window.MINDAR) {
+        log('MindAR failed to load — check internet connection', 'err');
+        return;
+      }
+      log('MindAR loaded OK', 'ok');
 
-    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-    scene.add(light);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(5, 10, 7);
-    scene.add(dirLight);
+      if (!window.THREE) {
+        log('Three.js failed to load', 'err');
+        return;
+      }
+      log('Three.js loaded OK', 'ok');
 
-    const loader = new THREE.GLTFLoader();
-    loader.load("my-model.glb", (gltf) => {
-      const model = gltf.scene;
-      model.scale.set(0.1, 0.1, 0.1);
-      model.position.set(0, 0, 0);
-      anchor.group.add(model);
-    });
+      log('Loading targets.mind...');
+      const mindarThree = new window.MINDAR.IMAGE.MindARThree({
+        container: document.getElementById("container"),
+        imageTargetSrc: "targets.mind",
+        webXR: false,
+      });
+      log('MindARThree created OK', 'ok');
 
-    const anchor = mindarThree.addAnchor(0);
+      const { renderer, scene, camera } = mindarThree;
 
-    await mindarThree.start();
+      const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+      scene.add(light);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(5, 10, 7);
+      scene.add(dirLight);
+      log('Lights added', 'ok');
 
-    renderer.setAnimationLoop(() => {
-      renderer.render(scene, camera);
-    });
+      log('Loading my-model.glb...');
+      const loader = new THREE.GLTFLoader();
+      loader.load(
+        "my-model.glb",
+        (gltf) => {
+          log('GLB loaded OK', 'ok');
+          const model = gltf.scene;
+          model.scale.set(0.1, 0.1, 0.1);
+          model.position.set(0, 0, 0);
+          anchor.group.add(model);
+          log('Model added to anchor', 'ok');
+        },
+        undefined,
+        (err) => {
+          log(`GLB load error: ${err.message}`, 'err');
+        }
+      );
 
+      const anchor = mindarThree.addAnchor(0);
+      log('Anchor created', 'ok');
+
+      log('Starting camera... (allow camera permission if prompted)');
+      await mindarThree.start();
+      log('Camera started OK', 'ok');
+
+      renderer.setAnimationLoop(() => {
+        renderer.render(scene, camera);
+      });
+
+    } catch (err) {
+      log(`Fatal error: ${err.message}`, 'err');
+    }
   };
 
   start();
